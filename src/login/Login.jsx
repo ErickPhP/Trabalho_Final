@@ -5,6 +5,8 @@ import ButtonClick from "./Button";
 import { toast } from "react-toastify";
 import useAuth from "../lib/useAuth";
 import { useNavigate } from "react-router-dom";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../lib/firebaseConfig";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -55,6 +57,21 @@ export default function Login() {
     }
   };
 
+  const handleEsqueciSenha = async () => {
+    if (!email) {
+      toast.info("Digite seu e-mail para redefinir a senha.");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast.success("E-mail de redefinição enviado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao enviar e-mail. Verifique o endereço.");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
@@ -87,6 +104,19 @@ export default function Login() {
             setValue={setPassword}
             required
           />
+
+          {isLogin && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={handleEsqueciSenha}
+                className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Esqueceu a senha?
+              </button>
+            </div>
+          )}
+
           {!isLogin && (
             <Input
               idInput="confirmePassword"

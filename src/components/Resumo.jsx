@@ -1,6 +1,9 @@
 import React from "react";
+import { useTransacoes } from "../context/TransacoesContext"; // ✅ Importa o contexto
 
-export default function Resumo({ transacoes }) {
+export default function Resumo() {
+  const { transacoes } = useTransacoes(); // ✅ Usa o contexto
+
   const totalReceita = transacoes
     .filter((t) => t.tipo === "receita")
     .reduce((acc, t) => acc + parseFloat(t.valor), 0);
@@ -11,29 +14,32 @@ export default function Resumo({ transacoes }) {
 
   const saldo = totalReceita - totalDespesa;
 
+  const Card = ({ title, value, color }) => (
+    <div
+      className={`bg-white dark:bg-gray-800 border-l-4 ${color} p-4 rounded-lg shadow-md text-center`}
+    >
+      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+        {title}
+      </h3>
+      <p className="text-2xl font-bold mt-2 text-gray-900 dark:text-white">
+        R$ {value.toFixed(2)}
+      </p>
+    </div>
+  );
+
   return (
-    <div className="max-w-xl mx-auto mb-8 p-6 bg-white rounded shadow text-center">
-      <h2 className="text-2xl font-bold mb-6">Resumo Financeiro</h2>
-      <div className="flex justify-around text-lg font-semibold">
-        <div className="bg-green-100 text-green-800 p-4 rounded w-1/3">
-          Receitas
-          <br />
-          R$ {totalReceita.toFixed(2)}
-        </div>
-        <div className="bg-red-100 text-red-800 p-4 rounded w-1/3">
-          Despesas
-          <br />
-          R$ {totalDespesa.toFixed(2)}
-        </div>
-        <div
-          className={`p-4 rounded w-1/3 ${
-            saldo >= 0 ? "bg-green-200 text-green-900" : "bg-red-200 text-red-900"
-          }`}
-        >
-          Saldo
-          <br />
-          R$ {saldo.toFixed(2)}
-        </div>
+    <div className="max-w-4xl mx-auto mb-10 px-4 sm:px-6 md:px-8">
+      <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-800 dark:text-gray-100">
+        Resumo Financeiro
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <Card title="Receitas" value={totalReceita} color="border-green-500" />
+        <Card title="Despesas" value={totalDespesa} color="border-red-500" />
+        <Card
+          title="Saldo"
+          value={saldo}
+          color={saldo >= 0 ? "border-green-500" : "border-red-500"}
+        />
       </div>
     </div>
   );

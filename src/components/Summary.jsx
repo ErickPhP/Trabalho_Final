@@ -1,41 +1,45 @@
-import React, { useEffect, useState } from "react";
-import { db } from "../firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import React from "react";
+import { useTransacoes } from "../context/TransacoesContext"; // ✅ Importa o contexto
 
 export default function Summary() {
-  const [receita, setReceita] = useState(0);
-  const [despesa, setDespesa] = useState(0);
+  const { transacoes } = useTransacoes(); // ✅ Usa o contexto
 
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "transacoes"), (snapshot) => {
-      let totalReceita = 0, totalDespesa = 0;
-      snapshot.docs.forEach((doc) => {
-        const { tipo, valor } = doc.data();
-        if (tipo === "receita") totalReceita += valor;
-        else totalDespesa += valor;
-      });
+  const receita = transacoes
+    .filter((t) => t.tipo === "receita")
+    .reduce((acc, t) => acc + parseFloat(t.valor), 0);
 
-      setReceita(totalReceita);
-      setDespesa(totalDespesa);
-    });
+  const despesa = transacoes
+    .filter((t) => t.tipo === "despesa")
+    .reduce((acc, t) => acc + parseFloat(t.valor), 0);
 
-    return () => unsub();
-  }, []);
+  const saldo = receita - despesa;
 
   return (
-    <div className="flex justify-around mt-6 text-center">
-      <div>
-        <p className="text-green-600 font-bold">Receitas</p>
-        <p>R$ {receita.toFixed(2)}</p>
-      </div>
-      <div>
-        <p className="text-red-600 font-bold">Despesas</p>
-        <p>R$ {despesa.toFixed(2)}</p>
-      </div>
-      <div>
-        <p className="text-gray-700 font-bold">Saldo</p>
-        <p>R$ {(receita - despesa).toFixed(2)}</p>
-      </div>
+    <div className="max-w-xl mx-auto mt-6 flex flex-col sm:flex-row justify-around gap-6 text-center bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <ResumoCard title="Receitas" value={receita} color="green" />
+      <ResumoCard title="Despesas" value={despesa} color="red" />
+      <ResumoCard
+        title="Saldo"
+        value={saldo}
+        color={saldo >= 0 ? "green" : "red"}
+        destaque
+      />
+    </div>
+  );
+}
+
+function ResumoCard({ title, value, color, destaque = false }) {
+  const borderColor = `border-${color}-500`;
+  const textColor = destaque
+    ? `text-${color}-700 dark:text-${color}-400`
+    : `text-${color}-600`;
+
+  return (
+    <div className={`flex-1 border-l-4 ${borderColor} pl-4`}>
+      <p className={`font-bold text-lg ${textColor}`}>{title}</p>
+      <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        R$ {value.toFixed(2)}
+      </p>
     </div>
   );
 }

@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../firebase";
-import { collection, addDoc, updateDoc, doc, Timestamp } from "firebase/firestore";
+import { db, auth } from "../lib/firebaseConfig";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  doc,
+  Timestamp,
+} from "firebase/firestore";
 
-const categorias = ["Salário", "Alimentação", "Transporte", "Lazer", "Outro"];
+const categoriasPadrao = [
+  "Salário",
+  "Alimentação",
+  "Transporte",
+  "Lazer",
+  "Outro",
+];
 
 export default function TransactionForm({ onSubmitComplete, transacaoParaEditar }) {
   const [tipo, setTipo] = useState("receita");
@@ -10,27 +22,35 @@ export default function TransactionForm({ onSubmitComplete, transacaoParaEditar 
   const [valor, setValor] = useState("");
   const [categoria, setCategoria] = useState("Outro");
   const [data, setData] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (transacaoParaEditar) {
       setTipo(transacaoParaEditar.tipo);
       setDescricao(transacaoParaEditar.descricao);
       setValor(transacaoParaEditar.valor.toString());
-      setCategoria(transacaoParaEditar.categoria);
-
-      const dateObj = transacaoParaEditar.data.seconds
-        ? new Date(transacaoParaEditar.data.seconds * 1000)
-        : new Date();
-      const isoString = dateObj.toISOString();
-      setData(isoString.substring(0, 16));
+      setCategoria(transacaoParaEditar.categoria || "Outro");
+      setData(formatDateForInput(transacaoParaEditar.data));
     } else {
-      setTipo("receita");
-      setDescricao("");
-      setValor("");
-      setCategoria("Outro");
-      setData("");
+      resetForm();
     }
   }, [transacaoParaEditar]);
+
+  const formatDateForInput = (timestamp) => {
+    if (!timestamp) return "";
+    const dateObj = timestamp.seconds
+      ? new Date(timestamp.seconds * 1000)
+      : new Date(timestamp);
+    return dateObj.toISOString().substring(0, 16);
+  };
+
+  const resetForm = () => {
+    setTipo("receita");
+    setDescricao("");
+    setValor("");
+    setCategoria("Outro");
+    setData("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,6 +65,17 @@ export default function TransactionForm({ onSubmitComplete, transacaoParaEditar 
       return;
     }
 
+    if (isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
+      alert("Digite um valor numérico maior que zero.");
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Você precisa estar logado para salvar transações.");
+      return;
+    }
+
     const transacaoData = {
       tipo,
       descricao: descricao.trim(),
@@ -53,46 +84,69 @@ export default function TransactionForm({ onSubmitComplete, transacaoParaEditar 
       data: Timestamp.fromDate(new Date(data)),
     };
 
+    setLoading(true);
     try {
       if (transacaoParaEditar) {
-        const docRef = doc(db, "transacoes", transacaoParaEditar.id);
+        const docRef = doc(
+          db,
+          "users",
+          user.uid,
+          "transacoes",
+          transacaoParaEditar.id
+        );
         await updateDoc(docRef, transacaoData);
       } else {
-        await addDoc(collection(db, "transacoes"), transacaoData);
+        await addDoc(collection(db, "users", user.uid, "transacoes"), transacaoData);
       }
 
       if (onSubmitComplete) onSubmitComplete();
-
-      if (!transacaoParaEditar) {
-        setTipo("receita");
-        setDescricao("");
-        setValor("");
-        setCategoria("Outro");
-        setData("");
-      }
+      if (!transacaoParaEditar) resetForm();
     } catch (error) {
       console.error("Erro ao salvar a transação:", error);
       alert("Erro ao salvar a transação, tente novamente.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <select
-        value={tipo}
-        onChange={(e) => setTipo(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-      >
-        <option value="receita">Receita</option>
-        <option value="despesa">Despesa</option>
-      </select>
+    <form
+      onSubmit={handleSubmit}
+      className="max-w-xl mx-auto bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md space-y-6"
+    >
+      <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-center">
+        {transacaoParaEditar ? "Editar Transação" : "Nova Transação"}
+      </h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <select
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+          className="p-3 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="receita">Receita</option>
+          <option value="despesa">Despesa</option>
+        </select>
+
+        <select
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          className="p-3 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          {categoriasPadrao.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <input
         type="text"
         placeholder="Descrição"
         value={descricao}
         onChange={(e) => setDescricao(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         required
       />
 
@@ -101,37 +155,32 @@ export default function TransactionForm({ onSubmitComplete, transacaoParaEditar 
         placeholder="Valor (R$)"
         value={valor}
         onChange={(e) => setValor(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         required
         min="0.01"
         step="0.01"
       />
 
-      <select
-        value={categoria}
-        onChange={(e) => setCategoria(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-      >
-        {categorias.map((cat) => (
-          <option key={cat} value={cat}>
-            {cat}
-          </option>
-        ))}
-      </select>
-
       <input
         type="datetime-local"
         value={data}
         onChange={(e) => setData(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         required
       />
 
       <button
         type="submit"
-        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-md shadow transition"
+        disabled={loading}
+        className={`w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-md shadow-md transition duration-200 ${
+          loading ? "opacity-50 cursor-not-allowed" : ""
+        }`}
       >
-        {transacaoParaEditar ? "Atualizar" : "Adicionar"}
+        {loading
+          ? "Salvando..."
+          : transacaoParaEditar
+          ? "Atualizar"
+          : "Adicionar"}
       </button>
     </form>
   );

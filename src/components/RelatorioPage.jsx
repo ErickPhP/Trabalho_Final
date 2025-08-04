@@ -5,7 +5,7 @@ import { useTransacoes } from "../context/TransacoesContext";
 
 export default function RelatorioPage() {
   const navigate = useNavigate();
-  const { transacoes } = useTransacoes();
+  const { loading } = useTransacoes();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 sm:px-6 md:px-8 py-6">
@@ -19,7 +19,15 @@ export default function RelatorioPage() {
           ← Voltar
         </button>
 
-        <Relatorio transacoes={transacoes} />
+        {loading ? (
+          <div className="flex justify-center items-center h-96">
+            <div className="text-gray-600 dark:text-gray-300 text-lg">
+              Carregando relatório...
+            </div>
+          </div>
+        ) : (
+          <Relatorio />
+        )}
       </div>
     </div>
   );

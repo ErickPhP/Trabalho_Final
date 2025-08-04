@@ -1,8 +1,8 @@
 import React from "react";
-import { useTransacoes } from "../context/TransacoesContext"; // ✅ Importa o contexto
+import { useTransacoes } from "../context/TransacoesContext";
 
 export default function Summary() {
-  const { transacoes } = useTransacoes(); // ✅ Usa o contexto
+  const { transacoes, loading } = useTransacoes();
 
   const receita = transacoes
     .filter((t) => t.tipo === "receita")
@@ -13,6 +13,14 @@ export default function Summary() {
     .reduce((acc, t) => acc + parseFloat(t.valor), 0);
 
   const saldo = receita - despesa;
+
+  if (loading) {
+    return (
+      <div className="max-w-xl mx-auto mt-6 text-center text-gray-600 dark:text-gray-300">
+        Carregando resumo...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto mt-6 flex flex-col sm:flex-row justify-around gap-6 text-center bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">

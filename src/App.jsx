@@ -24,8 +24,8 @@ export default function App() {
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef(null);
 
-  const { user: usuario, loading } = useAuth();
-  const { transacoes } = useTransacoes();
+  const { user: usuario, loading: loadingAuth } = useAuth();
+  const { loading: loadingTransacoes } = useTransacoes();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,10 +48,10 @@ export default function App() {
     return name.slice(0, 2).toUpperCase();
   };
 
-  if (loading) {
+  if (loadingAuth || loadingTransacoes) {
     return (
       <div className="h-screen flex justify-center items-center text-lg text-gray-700 dark:text-white">
-        Carregando...
+        Carregando dados...
       </div>
     );
   }
@@ -75,25 +75,24 @@ export default function App() {
         element={
           usuario ? (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 px-4 sm:px-6 md:px-8 py-6 relative">
+              {/* ✅ Botão de perfil com foto */}
               <div className="fixed top-4 right-4 sm:top-6 sm:right-6 z-50" ref={menuRef}>
                 <button
                   onClick={() => setMenuAberto(!menuAberto)}
-                  className="p-2 sm:p-3 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-md transition focus:outline-none"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-green-600 shadow-md transition focus:outline-none"
                   aria-label="Menu do usuário"
                 >
-                  <svg
-                    className="w-5 h-5 sm:w-6 sm:h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5.121 17.804A4 4 0 017 17h10a4 4 0 011.879.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  {usuario?.photoURL ? (
+                    <img
+                      src={usuario.photoURL}
+                      alt="Foto do usuário"
+                      className="w-full h-full object-cover"
                     />
-                  </svg>
+                  ) : (
+                    <div className="w-full h-full bg-green-600 text-white flex items-center justify-center font-bold">
+                      {getInitials(usuario?.email)}
+                    </div>
+                  )}
                 </button>
 
                 <AnimatePresence>

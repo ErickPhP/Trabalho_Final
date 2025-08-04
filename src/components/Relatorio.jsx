@@ -1,6 +1,9 @@
 import React from "react";
+import { useTransacoes } from "../context/TransacoesContext";
 
-export default function Relatorio({ transacoes }) {
+export default function Relatorio() {
+  const { transacoes, loading } = useTransacoes();
+
   const totalReceita = transacoes
     .filter((t) => t.tipo === "receita")
     .reduce((acc, t) => acc + parseFloat(t.valor), 0);
@@ -10,6 +13,16 @@ export default function Relatorio({ transacoes }) {
     .reduce((acc, t) => acc + parseFloat(t.valor), 0);
 
   const saldo = totalReceita - totalDespesa;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <div className="text-gray-600 dark:text-gray-300 text-lg">
+          Carregando relatório detalhado...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg">
